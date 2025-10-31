@@ -109,14 +109,14 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
 
-    # Charger modèle YOLO (modèle personnalisé entraîné sur TACO dataset)
+    # Charger modèle YOLO11 (nano - le plus rapide)
     try:
         from services.yolo_detection import get_yolo_service
-        yolo_service = get_yolo_service()  # Utilise le modèle TACO par défaut
+        yolo_service = get_yolo_service()  # Utilise YOLO11n par défaut
         app.yolo_service = yolo_service
-        print("✅ Modèle YOLO TACO chargé avec succès (détection active)")
+        print("✅ Modèle YOLO11 chargé avec succès (détection active)")
     except Exception as e:
-        print(f"⚠️  YOLO non disponible: {e}")
+        print(f"⚠️  YOLO11 non disponible: {e}")
         print("ℹ️  Le backend fonctionne en mode API-only (sans détection)")
         app.yolo_service = None
 
