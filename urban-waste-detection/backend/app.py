@@ -10,7 +10,7 @@ Date: 2025
 
 import os
 from pathlib import Path
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -71,6 +71,13 @@ def index():
         },
         'documentation': '/api/docs'
     })
+
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Servir les fichiers uploadés (images originales et annotées)."""
+    upload_dir = Path('uploads')
+    return send_from_directory(upload_dir, filename)
 
 
 @app.route('/api/health')
