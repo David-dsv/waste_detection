@@ -277,38 +277,75 @@ class YOLODetectionService:
             # Charger l'image
             image = cv2.imread(image_path)
 
-            # Couleurs par catégorie
+            if image is None:
+                print(f"❌ Impossible de charger l'image: {image_path}")
+                return
+
+            # Couleurs par catégorie (BGR format pour OpenCV)
             colors = {
-                'plastic': (0, 0, 255),      # Rouge
-                'glass': (0, 255, 255),      # Jaune
-                'organic': (0, 255, 0),      # Vert
-                'metal': (128, 128, 128),    # Gris
-                'paper': (255, 200, 100),    # Bleu clair
+                'plastic': (0, 0, 255),      # Rouge vif
+                'glass': (0, 255, 255),      # Jaune vif
+                'organic': (0, 255, 0),      # Vert vif
+                'metal': (192, 192, 192),    # Gris clair
+                'paper': (255, 144, 30),     # Bleu-orange
                 'electronic': (255, 0, 255), # Magenta
-                'bulky': (0, 128, 255),      # Orange
-                'other': (255, 255, 255)     # Blanc
+                'bulky': (0, 165, 255),      # Orange
+                'other': (255, 255, 0)       # Cyan
             }
 
+            print(f"🎨 Annotation de {len(detections)} détections...")
+
             # Dessiner les détections
-            for det in detections:
+            for i, det in enumerate(detections):
                 x1, y1, x2, y2 = det['bbox']
                 category = det['category']
-                color = colors.get(category, (255, 255, 255))
+                color = colors.get(category, (255, 255, 0))
 
-                # Rectangle
-                cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+                # Rectangle avec bordure épaisse
+                thickness = 3  # Augmenté de 2 à 3
+                cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
 
-                # Label
+                # Label avec fond
                 label = f"{det['class']} {det['confidence']:.2f}"
-                cv2.putText(image, label, (x1, y1 - 10),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                font_scale = 0.6  # Augmenté de 0.5 à 0.6
+                font_thickness = 2
+
+                # Calculer la taille du texte
+                (text_width, text_height), baseline = cv2.getTextSize(
+                    label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness
+                )
+
+                # Dessiner un rectangle de fond pour le texte
+                cv2.rectangle(
+                    image,
+                    (x1, y1 - text_height - 10),
+                    (x1 + text_width, y1),
+                    color,
+                    -1  # Remplir
+                )
+
+                # Texte en blanc pour contraste
+                cv2.putText(
+                    image,
+                    label,
+                    (x1, y1 - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    font_scale,
+                    (255, 255, 255),  # Blanc
+                    font_thickness
+                )
+
+                print(f"  ✓ Détection {i+1}: {label} @ [{x1},{y1},{x2},{y2}]")
 
             # Sauvegarder
             cv2.imwrite(output_path, image)
             print(f"💾 Image annotée sauvegardée: {output_path}")
+            print(f"📊 Total: {len(detections)} bounding boxes dessinées")
 
         except Exception as e:
             print(f"❌ Erreur annotation: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 # Instance globale

@@ -23,6 +23,7 @@ import {
   CloudUpload as UploadIcon,
   CameraAlt as CameraIcon,
   CheckCircle as CheckIcon,
+  Map as MapIcon,
 } from '@mui/icons-material';
 import { uploadImage } from '../redux/detectionsSlice';
 
@@ -63,21 +64,27 @@ const ImageUpload = ({ onDetectionComplete }) => {
     multiple: false,
   });
 
-  // Capturer depuis webcam
-  const captureImage = useCallback(() => {
+  // Capturer depuis webcam et détecter automatiquement
+  const captureImage = useCallback(async () => {
     const imageSrc = webcamRef.current.getScreenshot();
     if (imageSrc) {
-      // Convertir base64 en File
-      fetch(imageSrc)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const file = new File([blob], 'webcam.jpg', { type: 'image/jpeg' });
-          setImage(file);
-          setImagePreview(imageSrc);
-          setIsWebcamImage(true);
-          setResult(null);
-          setError(null);
-        });
+      try {
+        // Convertir base64 en File
+        const res = await fetch(imageSrc);
+        const blob = await res.blob();
+        const file = new File([blob], 'webcam.jpg', { type: 'image/jpeg' });
+        
+        setImage(file);
+        setImagePreview(imageSrc);
+        setIsWebcamImage(true);
+        setResult(null);
+        setError(null);
+        
+        // Déclencher automatiquement la détection
+        await handleDetectForFile(file);
+      } catch (err) {
+        setError('Erreur lors de la capture');
+      }
     }
   }, [webcamRef]);
 
@@ -96,9 +103,9 @@ const ImageUpload = ({ onDetectionComplete }) => {
     }
   };
 
-  // Upload et détection
-  const handleDetect = async () => {
-    if (!image) {
+  // Fonction de détection avec fichier en paramètre
+  const handleDetectForFile = async (fileToDetect) => {
+    if (!fileToDetect) {
       setError('Veuillez sélectionner une image');
       return;
     }
@@ -108,7 +115,7 @@ const ImageUpload = ({ onDetectionComplete }) => {
 
     try {
       const formData = new FormData();
-      formData.append('image', image);
+      formData.append('image', fileToDetect);
 
       if (gpsLat) formData.append('gps_lat', gpsLat);
       if (gpsLon) formData.append('gps_lon', gpsLon);
@@ -118,14 +125,18 @@ const ImageUpload = ({ onDetectionComplete }) => {
       const response = await dispatch(uploadImage(formData)).unwrap();
 
       setResult(response);
-      if (onDetectionComplete) {
-        onDetectionComplete(response);
-      }
+      // Ne pas appeler onDetectionComplete automatiquement
+      // L'utilisateur doit voir le résultat d'abord
     } catch (err) {
       setError(err.message || 'Erreur lors de la détection');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Upload et détection (utilise la fonction générique)
+  const handleDetect = async () => {
+    await handleDetectForFile(image);
   };
 
   return (
@@ -152,58 +163,113 @@ const ImageUpload = ({ onDetectionComplete }) => {
           <Grid item xs={12}>
             {useWebcam ? (
               <Box>
-                {result && result.annotated_url ? (
-                  // Afficher l'image annotée après détection
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom color="success.main">
-                      ✅ Résultat de la détection ({result.num_objects} objet(s))
-                    </Typography>
-                    <img
-                      src={`http://localhost:5001${result.annotated_url}`}
-                      alt="Détection annotée"
-                      style={{
-                        width: '100%',
-                        maxWidth: 640,
-                        borderRadius: 8,
-                        border: '3px solid #4caf50',
-                        display: 'block',
-                        margin: '0 auto'
-                      }}
-                    />
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<CameraIcon />}
-                      onClick={() => setResult(null)}
-                      sx={{ mt: 2 }}
-                    >
-                      Nouvelle capture
-                    </Button>
-                  </Box>
-                ) : (
-                  // Afficher la webcam
-                  <Box>
+                <Grid container spacing={2}>
+                  {/* Colonne Webcam */}
+                  <Grid item xs={12} md={6}>
                     <Typography variant="subtitle2" gutterBottom>
-                      Webcam
+                      Webcam en direct
                     </Typography>
-                    <Webcam
-                      ref={webcamRef}
-                      screenshotFormat="image/jpeg"
-                      width="100%"
-                      videoConstraints={{ facingMode: 'user' }}
-                      style={{ transform: 'scaleX(-1)', borderRadius: 8, maxWidth: 640, display: 'block', margin: '0 auto' }}
-                    />
+                    <Box sx={{ position: 'relative' }}>
+                      <Webcam
+                        ref={webcamRef}
+                        screenshotFormat="image/jpeg"
+                        width="100%"
+                        videoConstraints={{ facingMode: 'user' }}
+                        style={{ 
+                          transform: 'scaleX(-1)', 
+                          borderRadius: 8, 
+                          width: '100%',
+                          display: 'block'
+                        }}
+                      />
+                      {loading && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                          borderRadius: 2,
+                          padding: 2
+                        }}>
+                          <CircularProgress color="primary" />
+                        </Box>
+                      )}
+                    </Box>
                     <Button
                       fullWidth
                       variant="contained"
                       startIcon={<CameraIcon />}
                       onClick={captureImage}
+                      disabled={loading}
                       sx={{ mt: 1 }}
                     >
-                      Capturer
+                      {loading ? 'Détection en cours...' : 'Capturer & Détecter'}
                     </Button>
-                  </Box>
-                )}
+                  </Grid>
+
+                  {/* Colonne Résultat */}
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {result ? (
+                        <span style={{ color: '#4caf50' }}>
+                          ✅ Résultat ({result.num_objects} objet{result.num_objects > 1 ? 's' : ''})
+                        </span>
+                      ) : (
+                        'Résultat de la détection'
+                      )}
+                    </Typography>
+                    <Box sx={{ 
+                      minHeight: { xs: 240, md: 320 },
+                      border: result ? '3px solid #4caf50' : '2px dashed #ccc',
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: result ? 'transparent' : '#f5f5f5',
+                      overflow: 'hidden'
+                    }}>
+                      {result && result.annotated_url ? (
+                        <img
+                          src={`http://localhost:5001${result.annotated_url}`}
+                          alt="Détection annotée"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            borderRadius: 6
+                          }}
+                        />
+                      ) : (
+                        <Typography color="text.secondary">
+                          {loading ? 'Analyse en cours...' : 'En attente de capture'}
+                        </Typography>
+                      )}
+                    </Box>
+                    {result && (
+                      <Box sx={{ mt: 1 }}>
+                        <Box sx={{ p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                          <Typography variant="body2">
+                            Confiance: {(result.confidence_avg * 100).toFixed(1)}%
+                          </Typography>
+                          <Typography variant="body2">
+                            Temps: {result.processing_time.toFixed(2)}s
+                          </Typography>
+                        </Box>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="success"
+                          startIcon={<MapIcon />}
+                          onClick={() => onDetectionComplete && onDetectionComplete(result)}
+                          sx={{ mt: 1 }}
+                        >
+                          Voir sur la carte
+                        </Button>
+                      </Box>
+                    )}
+                  </Grid>
+                </Grid>
               </Box>
             ) : (
               // Mode upload de fichier
@@ -226,18 +292,32 @@ const ImageUpload = ({ onDetectionComplete }) => {
                         margin: '0 auto'
                       }}
                     />
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      onClick={() => {
-                        setResult(null);
-                        setImage(null);
-                        setImagePreview(null);
-                      }}
-                      sx={{ mt: 2 }}
-                    >
-                      Nouvelle image
-                    </Button>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12} sm={6}>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="success"
+                          startIcon={<MapIcon />}
+                          onClick={() => onDetectionComplete && onDetectionComplete(result)}
+                        >
+                          Voir sur la carte
+                        </Button>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          onClick={() => {
+                            setResult(null);
+                            setImage(null);
+                            setImagePreview(null);
+                          }}
+                        >
+                          Nouvelle image
+                        </Button>
+                      </Grid>
+                    </Grid>
                   </Box>
                 ) : imagePreview ? (
                   // Prévisualisation avant détection
@@ -325,17 +405,19 @@ const ImageUpload = ({ onDetectionComplete }) => {
           />
         </Box>
 
-        {/* Bouton Détection */}
-        <Button
-          fullWidth
-          variant="contained"
-          size="large"
-          onClick={handleDetect}
-          disabled={!image || loading}
-          sx={{ mt: 3 }}
-        >
-          {loading ? <CircularProgress size={24} /> : 'Détecter les déchets'}
-        </Button>
+        {/* Bouton Détection - Uniquement pour le mode upload de fichier */}
+        {!useWebcam && (
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={handleDetect}
+            disabled={!image || loading}
+            sx={{ mt: 3 }}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Détecter les déchets'}
+          </Button>
+        )}
 
         {/* Erreur */}
         {error && (
