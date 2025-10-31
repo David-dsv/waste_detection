@@ -149,92 +149,140 @@ const ImageUpload = ({ onDetectionComplete }) => {
         </Box>
 
         <Grid container spacing={3}>
-          {/* Upload / Webcam */}
-          <Grid item xs={12} md={useWebcam && result ? 6 : 12}>
+          <Grid item xs={12}>
             {useWebcam ? (
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Webcam
-                </Typography>
-                <Webcam
-                  ref={webcamRef}
-                  screenshotFormat="image/jpeg"
-                  width="100%"
-                  videoConstraints={{ facingMode: 'user' }}
-                  style={{ transform: 'scaleX(-1)', borderRadius: 8 }}
-                />
-                <Button
-                  fullWidth
-                  variant="contained"
-                  startIcon={<CameraIcon />}
-                  onClick={captureImage}
-                  sx={{ mt: 1 }}
-                >
-                  Capturer
-                </Button>
+                {result && result.annotated_url ? (
+                  // Afficher l'image annotée après détection
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom color="success.main">
+                      ✅ Résultat de la détection ({result.num_objects} objet(s))
+                    </Typography>
+                    <img
+                      src={`http://localhost:5001${result.annotated_url}`}
+                      alt="Détection annotée"
+                      style={{
+                        width: '100%',
+                        maxWidth: 640,
+                        borderRadius: 8,
+                        border: '3px solid #4caf50',
+                        display: 'block',
+                        margin: '0 auto'
+                      }}
+                    />
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      startIcon={<CameraIcon />}
+                      onClick={() => setResult(null)}
+                      sx={{ mt: 2 }}
+                    >
+                      Nouvelle capture
+                    </Button>
+                  </Box>
+                ) : (
+                  // Afficher la webcam
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Webcam
+                    </Typography>
+                    <Webcam
+                      ref={webcamRef}
+                      screenshotFormat="image/jpeg"
+                      width="100%"
+                      videoConstraints={{ facingMode: 'user' }}
+                      style={{ transform: 'scaleX(-1)', borderRadius: 8, maxWidth: 640, display: 'block', margin: '0 auto' }}
+                    />
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<CameraIcon />}
+                      onClick={captureImage}
+                      sx={{ mt: 1 }}
+                    >
+                      Capturer
+                    </Button>
+                  </Box>
+                )}
               </Box>
             ) : (
-              <Box
-                {...getRootProps()}
-                sx={{
-                  border: '2px dashed',
-                  borderColor: isDragActive ? 'primary.main' : 'grey.400',
-                  borderRadius: 2,
-                  p: 4,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  bgcolor: isDragActive ? 'action.hover' : 'transparent',
-                }}
-              >
-                <input {...getInputProps()} />
-                <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                <Typography>
-                  {isDragActive
-                    ? 'Déposez l\'image ici'
-                    : 'Glissez une image ou cliquez pour sélectionner'}
-                </Typography>
+              // Mode upload de fichier
+              <Box>
+                {result && result.annotated_url ? (
+                  // Afficher l'image annotée
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom color="success.main">
+                      ✅ Résultat de la détection ({result.num_objects} objet(s))
+                    </Typography>
+                    <img
+                      src={`http://localhost:5001${result.annotated_url}`}
+                      alt="Détection annotée"
+                      style={{
+                        width: '100%',
+                        maxWidth: 640,
+                        borderRadius: 8,
+                        border: '3px solid #4caf50',
+                        display: 'block',
+                        margin: '0 auto'
+                      }}
+                    />
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      onClick={() => {
+                        setResult(null);
+                        setImage(null);
+                        setImagePreview(null);
+                      }}
+                      sx={{ mt: 2 }}
+                    >
+                      Nouvelle image
+                    </Button>
+                  </Box>
+                ) : imagePreview ? (
+                  // Prévisualisation avant détection
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Prévisualisation
+                    </Typography>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{
+                        width: '100%',
+                        maxWidth: 640,
+                        borderRadius: 8,
+                        display: 'block',
+                        margin: '0 auto'
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  // Zone de drop
+                  <Box
+                    {...getRootProps()}
+                    sx={{
+                      border: '2px dashed',
+                      borderColor: isDragActive ? 'primary.main' : 'grey.400',
+                      borderRadius: 2,
+                      p: 4,
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      bgcolor: isDragActive ? 'action.hover' : 'transparent',
+                    }}
+                  >
+                    <input {...getInputProps()} />
+                    <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography>
+                      {isDragActive
+                        ? 'Déposez l\'image ici'
+                        : 'Glissez une image ou cliquez pour sélectionner'}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             )}
           </Grid>
-
-          {/* Image Annotée - Affichée à côté de la webcam après détection */}
-          {result && result.annotated_url && (
-            <Grid item xs={12} md={6}>
-              <Box>
-                <Typography variant="subtitle2" gutterBottom color="success.main">
-                  ✅ Résultat de la détection ({result.num_objects} objet(s))
-                </Typography>
-                <img
-                  src={`http://localhost:5001${result.annotated_url}`}
-                  alt="Détection annotée"
-                  style={{
-                    width: '100%',
-                    borderRadius: 8,
-                    border: '2px solid #4caf50',
-                  }}
-                />
-              </Box>
-            </Grid>
-          )}
-
-          {/* Prévisualisation avant détection (seulement si pas de webcam ou pas de résultat) */}
-          {!useWebcam && imagePreview && !result && (
-            <Grid item xs={12} md={6}>
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Prévisualisation
-                </Typography>
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  style={{
-                    width: '100%',
-                    borderRadius: 8,
-                  }}
-                />
-              </Box>
-            </Grid>
-          )}
         </Grid>
 
         {/* Options GPS et Alerte */}
