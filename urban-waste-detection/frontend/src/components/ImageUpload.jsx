@@ -150,15 +150,18 @@ const ImageUpload = ({ onDetectionComplete }) => {
 
         <Grid container spacing={3}>
           {/* Upload / Webcam */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={useWebcam && result ? 6 : 12}>
             {useWebcam ? (
               <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Webcam
+                </Typography>
                 <Webcam
                   ref={webcamRef}
                   screenshotFormat="image/jpeg"
                   width="100%"
                   videoConstraints={{ facingMode: 'user' }}
-                  style={{ transform: 'scaleX(-1)' }}
+                  style={{ transform: 'scaleX(-1)', borderRadius: 8 }}
                 />
                 <Button
                   fullWidth
@@ -194,40 +197,44 @@ const ImageUpload = ({ onDetectionComplete }) => {
             )}
           </Grid>
 
-          {/* Prévisualisation */}
-          <Grid item xs={12} md={6}>
-            {imagePreview || (result && result.annotated_url) ? (
+          {/* Image Annotée - Affichée à côté de la webcam après détection */}
+          {result && result.annotated_url && (
+            <Grid item xs={12} md={6}>
               <Box>
+                <Typography variant="subtitle2" gutterBottom color="success.main">
+                  ✅ Résultat de la détection ({result.num_objects} objet(s))
+                </Typography>
                 <img
-                  src={result && result.annotated_url
-                    ? `http://localhost:5001${result.annotated_url}`
-                    : imagePreview}
+                  src={`http://localhost:5001${result.annotated_url}`}
+                  alt="Détection annotée"
+                  style={{
+                    width: '100%',
+                    borderRadius: 8,
+                    border: '2px solid #4caf50',
+                  }}
+                />
+              </Box>
+            </Grid>
+          )}
+
+          {/* Prévisualisation avant détection (seulement si pas de webcam ou pas de résultat) */}
+          {!useWebcam && imagePreview && !result && (
+            <Grid item xs={12} md={6}>
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Prévisualisation
+                </Typography>
+                <img
+                  src={imagePreview}
                   alt="Preview"
                   style={{
                     width: '100%',
                     borderRadius: 8,
-                    transform: isWebcamImage && !result ? 'scaleX(-1)' : 'none'
                   }}
                 />
               </Box>
-            ) : (
-              <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: 'grey.100',
-                  borderRadius: 2,
-                  minHeight: 200,
-                }}
-              >
-                <Typography color="text.secondary">
-                  Aucune image sélectionnée
-                </Typography>
-              </Box>
-            )}
-          </Grid>
+            </Grid>
+          )}
         </Grid>
 
         {/* Options GPS et Alerte */}
