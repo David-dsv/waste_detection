@@ -1,0 +1,43 @@
+# Machine Learning & Deep Learning
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.35.0
+timm>=0.9.0
+
+# RF-DETR specific
+# Note: RF-DETR peut nécessiter une installation depuis source
+# git+https://github.com/lyuwenyu/RT-DETR.git
+
+# Data Processing
+numpy>=1.24.0
+opencv-python>=4.8.0
+pillow>=10.0.0
+albumentations>=1.3.0
+imgaug>=0.4.0
+
+# Dataset Management
+roboflow>=1.1.0
+pycocotools>=2.0.6
+tqdm>=4.65.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.17.0
+
+# Evaluation Metrics
+scikit-learn>=1.3.0
+pandas>=2.0.0
+
+# Logging & Monitoring
+tensorboard>=2.14.0
+wandb>=0.15.0
+
+# Utils
+pyyaml>=6.0
+requests>=2.31.0
+huggingface-hub>=0.17.0
+
+# Optional: For deployment
+onnx>=1.14.0
+onnxruntime>=1.16.0

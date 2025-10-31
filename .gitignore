@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+env/
+ENV/
+
+# Datasets & Models
+yolo_taco_workspace/TACO/
+yolo_taco_workspace/taco_yolo_data/
+yolo_taco_workspace/models/*.pt
+yolo_taco_workspace/runs/
+yolo_taco_workspace/backup_invalid_labels/
+yolo_taco_workspace/venv/
+*.pt
+*.pth
+*.weights
+*.onnx
+
+# Backend
+urban-waste-detection/backend/venv/
+urban-waste-detection/backend/.env
+urban-waste-detection/backend/instance/
+urban-waste-detection/backend/uploads/
+urban-waste-detection/backend/datasets/
+
+# Frontend
+urban-waste-detection/frontend/node_modules/
+urban-waste-detection/frontend/.next/
+urban-waste-detection/frontend/out/
+urban-waste-detection/frontend/.env.local
+urban-waste-detection/frontend/.env.production
+urban-waste-detection/frontend/dist/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.claude/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+files/
