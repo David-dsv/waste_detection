@@ -415,6 +415,7 @@ const ImageUpload = ({ onDetectionComplete }) => {
             disabled={!image || loading}
             sx={{ mt: 3 }}
           >
+            
             {loading ? <CircularProgress size={24} /> : 'Détecter les déchets'}
           </Button>
         )}
