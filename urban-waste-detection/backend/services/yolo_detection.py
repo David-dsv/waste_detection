@@ -11,68 +11,60 @@ from typing import List, Dict, Tuple
 from PIL import Image
 
 class YOLODetectionService:
-    """Service de détection avec YOLO11"""
+    """Service de détection avec YOLO11 fine-tuné sur TACO dataset"""
 
-    # Mapping des classes YOLO11 standard vers catégories de déchets
-    # YOLO11 utilise les 80 classes COCO standard
-    WASTE_CLASSES = {
-        # Objets qui sont des déchets
-        39: 'bottle',           # bouteille
-        40: 'wine glass',       # verre
-        41: 'cup',              # gobelet
-        42: 'fork',             # fourchette
-        43: 'knife',            # couteau
-        44: 'spoon',            # cuillère
-        45: 'bowl',             # bol
-        46: 'banana',           # banane
-        47: 'apple',            # pomme
-        48: 'sandwich',         # sandwich
-        49: 'orange',           # orange
-        50: 'broccoli',         # broccoli
-        51: 'carrot',           # carotte
-        52: 'hot dog',          # hot dog
-        53: 'pizza',            # pizza
-        54: 'donut',            # donut
-        55: 'cake',             # gâteau
-        73: 'book',             # livre (papier)
-        76: 'scissors',         # ciseaux
-        79: 'toothbrush',       # brosse à dents
+    # Classes du modèle TACO fine-tuné (6 classes de déchets)
+    # Correspond au fichier data.yaml utilisé pour l'entraînement
+    TACO_CLASSES = {
+        0: 'Cigarette',
+        1: 'Glass',
+        2: 'Metal',
+        3: 'Other',
+        4: 'Paper',
+        5: 'Plastic'
     }
 
-    # Mapping des classes vers catégories de déchets
+    # Mapping des classes TACO vers catégories pour les couleurs/stats
     WASTE_CATEGORIES = {
-        'plastic': ['bottle', 'cup'],
-        'glass': ['wine glass', 'bottle'],
-        'organic': ['banana', 'apple', 'orange', 'broccoli', 'carrot', 'sandwich', 'pizza', 'hot dog', 'donut', 'cake'],
-        'metal': ['fork', 'knife', 'spoon', 'scissors'],
-        'paper': ['book'],
-        'other': ['bowl', 'toothbrush']
+        'plastic': ['Plastic'],
+        'glass': ['Glass'],
+        'metal': ['Metal'],
+        'paper': ['Paper'],
+        'organic': ['Cigarette'],  # Cigarettes = déchets organiques/dangereux
+        'other': ['Other']
     }
 
-    def __init__(self, model_name: str = 'yolo11n.pt'):
+    # Chemin par défaut vers le modèle fine-tuné TACO
+    DEFAULT_MODEL_PATH = '/Users/vuong/Desktop/AI_PROJECT/yolo_taco_workspace/runs/detect/yolo11n_taco_20251031_171254/weights/best.pt'
+
+    def __init__(self, model_path: str = None):
         """
-        Initialise le service YOLO
+        Initialise le service YOLO avec le modèle fine-tuné TACO
 
         Args:
-            model_name: Nom du modèle YOLO11 ('yolo11n.pt', 'yolo11s.pt', etc.)
-                       Par défaut: yolo11n.pt (nano - le plus rapide)
+            model_path: Chemin vers le modèle .pt fine-tuné
+                       Par défaut: modèle TACO entraîné sur les 6 classes de déchets
         """
-        self.model_name = model_name
+        self.model_path = model_path or self.DEFAULT_MODEL_PATH
         self.model = None
-        self.confidence_threshold = float(os.getenv('CONFIDENCE_THRESHOLD', 0.5))
+        self.confidence_threshold = float(os.getenv('CONFIDENCE_THRESHOLD', 0.15))  # Seuil très bas pour détecter plus
 
-        print(f"🤖 Initialisation YOLO11 avec modèle: {model_name}...")
+        print(f"🤖 Initialisation YOLO11 TACO avec modèle: {self.model_path}...")
 
     def load_model(self):
-        """Charge le modèle YOLO11 (télécharge automatiquement si nécessaire)"""
+        """Charge le modèle YOLO11 fine-tuné sur TACO"""
         try:
-            print(f"📥 Chargement du modèle YOLO11: {self.model_name}...")
+            print(f"📥 Chargement du modèle TACO: {self.model_path}...")
 
-            # YOLO télécharge automatiquement le modèle si absent
-            self.model = YOLO(self.model_name)
+            # Vérifier que le modèle existe
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(f"Modèle non trouvé: {self.model_path}")
 
-            print(f"✅ Modèle YOLO11 chargé avec succès!")
-            print(f"📊 Utilisation de YOLO11 pour la détection de déchets urbains")
+            # Charger le modèle fine-tuné
+            self.model = YOLO(self.model_path)
+
+            print(f"✅ Modèle TACO chargé avec succès!")
+            print(f"📊 Classes détectables: {list(self.TACO_CLASSES.values())}")
             return self.model
 
         except Exception as e:
@@ -81,7 +73,7 @@ class YOLODetectionService:
 
     def detect(self, image_path: str) -> List[Dict]:
         """
-        Détecte les objets/déchets dans une image
+        Détecte les déchets dans une image avec le modèle TACO
 
         Args:
             image_path: Chemin vers l'image
@@ -89,7 +81,7 @@ class YOLODetectionService:
         Returns:
             Liste de détections avec format:
             {
-                'class': 'bottle',
+                'class': 'Plastic',
                 'category': 'plastic',
                 'confidence': 0.95,
                 'bbox': [x1, y1, x2, y2],
@@ -100,7 +92,7 @@ class YOLODetectionService:
             self.load_model()
 
         try:
-            # Détection avec YOLO
+            # Détection avec YOLO TACO
             results = self.model(image_path, conf=self.confidence_threshold)
 
             detections = []
@@ -114,9 +106,9 @@ class YOLODetectionService:
                     confidence = float(box.conf[0])
                     bbox = box.xyxy[0].cpu().numpy().tolist()  # [x1, y1, x2, y2]
 
-                    # Vérifier si c'est une classe "déchet"
-                    if class_id in self.WASTE_CLASSES:
-                        class_name = self.WASTE_CLASSES[class_id]
+                    # Toutes les classes du modèle TACO sont des déchets (0-5)
+                    if class_id in self.TACO_CLASSES:
+                        class_name = self.TACO_CLASSES[class_id]
                         category = self._get_category(class_name)
 
                         # Calculer l'aire
@@ -132,11 +124,13 @@ class YOLODetectionService:
 
                         detections.append(detection)
 
-            print(f"🔍 YOLO11 détecté: {len(detections)} objets/déchets")
+            print(f"🔍 TACO détecté: {len(detections)} déchets ({[d['class'] for d in detections]})")
             return detections
 
         except Exception as e:
             print(f"❌ Erreur détection: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def detect_from_array(self, image_array: np.ndarray) -> List[Dict]:
@@ -166,8 +160,9 @@ class YOLODetectionService:
                     confidence = float(box.conf[0])
                     bbox = box.xyxy[0].cpu().numpy().tolist()
 
-                    if class_id in self.WASTE_CLASSES:
-                        class_name = self.WASTE_CLASSES[class_id]
+                    # Toutes les classes TACO sont des déchets
+                    if class_id in self.TACO_CLASSES:
+                        class_name = self.TACO_CLASSES[class_id]
                         category = self._get_category(class_name)
                         area = int((bbox[2] - bbox[0]) * (bbox[3] - bbox[1]))
 
@@ -351,10 +346,10 @@ class YOLODetectionService:
 # Instance globale
 _yolo_service = None
 
-def get_yolo_service(model_name: str = 'yolo11n.pt') -> YOLODetectionService:
-    """Retourne l'instance globale du service YOLO11"""
+def get_yolo_service(model_path: str = None) -> YOLODetectionService:
+    """Retourne l'instance globale du service YOLO TACO"""
     global _yolo_service
     if _yolo_service is None:
-        _yolo_service = YOLODetectionService(model_name=model_name)
+        _yolo_service = YOLODetectionService(model_path=model_path)
         _yolo_service.load_model()
     return _yolo_service

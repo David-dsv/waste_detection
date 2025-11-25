@@ -32,6 +32,7 @@ const ImageUpload = ({ onDetectionComplete }) => {
   const webcamRef = useRef(null);
 
   const [useWebcam, setUseWebcam] = useState(false);
+  const [useRealtime, setUseRealtime] = useState(false);  // Mode temps réel
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isWebcamImage, setIsWebcamImage] = useState(false);
@@ -43,6 +44,9 @@ const ImageUpload = ({ onDetectionComplete }) => {
   const [gpsLat, setGpsLat] = useState('');
   const [gpsLon, setGpsLon] = useState('');
   const [sendAlert, setSendAlert] = useState(false);
+
+  // URL du stream temps réel
+  const STREAM_URL = 'http://localhost:5001/api/stream';
 
   // Dropzone
   const onDrop = useCallback((acceptedFiles) => {
@@ -146,130 +150,180 @@ const ImageUpload = ({ onDetectionComplete }) => {
           Détection de Déchets
         </Typography>
 
-        {/* Toggle Webcam */}
-        <Box sx={{ mb: 2 }}>
+        {/* Toggle Webcam et Mode Temps Réel */}
+        <Box sx={{ mb: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           <FormControlLabel
             control={
               <Switch
                 checked={useWebcam}
-                onChange={(e) => setUseWebcam(e.target.checked)}
+                onChange={(e) => {
+                  setUseWebcam(e.target.checked);
+                  if (!e.target.checked) setUseRealtime(false);
+                }}
               />
             }
             label="Utiliser la webcam"
           />
+          {useWebcam && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={useRealtime}
+                  onChange={(e) => setUseRealtime(e.target.checked)}
+                  color="success"
+                />
+              }
+              label="🔴 Détection TEMPS RÉEL"
+            />
+          )}
         </Box>
 
         <Grid container spacing={3}>
           <Grid item xs={12}>
             {useWebcam ? (
               <Box>
-                <Grid container spacing={2}>
-                  {/* Colonne Webcam */}
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Webcam en direct
+                {/* MODE TEMPS RÉEL */}
+                {useRealtime ? (
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                      🔴 DÉTECTION EN TEMPS RÉEL - Les déchets sont détectés automatiquement
                     </Typography>
-                    <Box sx={{ position: 'relative' }}>
-                      <Webcam
-                        ref={webcamRef}
-                        screenshotFormat="image/jpeg"
-                        width="100%"
-                        videoConstraints={{ facingMode: 'user' }}
-                        style={{ 
-                          transform: 'scaleX(-1)', 
-                          borderRadius: 8, 
-                          width: '100%',
-                          display: 'block'
-                        }}
-                      />
-                      {loading && (
-                        <Box sx={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          borderRadius: 2,
-                          padding: 2
-                        }}>
-                          <CircularProgress color="primary" />
-                        </Box>
-                      )}
-                    </Box>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={<CameraIcon />}
-                      onClick={captureImage}
-                      disabled={loading}
-                      sx={{ mt: 1 }}
-                    >
-                      {loading ? 'Détection en cours...' : 'Capturer & Détecter'}
-                    </Button>
-                  </Grid>
-
-                  {/* Colonne Résultat */}
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      {result ? (
-                        <span style={{ color: '#4caf50' }}>
-                          ✅ Résultat ({result.num_objects} objet{result.num_objects > 1 ? 's' : ''})
-                        </span>
-                      ) : (
-                        'Résultat de la détection'
-                      )}
-                    </Typography>
-                    <Box sx={{ 
-                      minHeight: { xs: 240, md: 320 },
-                      border: result ? '3px solid #4caf50' : '2px dashed #ccc',
+                    <Box sx={{
+                      position: 'relative',
+                      border: '3px solid #f44336',
                       borderRadius: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: result ? 'transparent' : '#f5f5f5',
                       overflow: 'hidden'
                     }}>
-                      {result && result.annotated_url ? (
-                        <img
-                          src={`http://localhost:5001${result.annotated_url}`}
-                          alt="Détection annotée"
+                      <img
+                        src={STREAM_URL}
+                        alt="Flux vidéo temps réel avec détection"
+                        style={{
+                          width: '100%',
+                          maxWidth: 800,
+                          display: 'block',
+                          margin: '0 auto'
+                        }}
+                      />
+                    </Box>
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Classes détectées:</strong> Cigarette, Glass, Metal, Paper, Plastic, Other
+                      </Typography>
+                      <Typography variant="body2">
+                        Les bounding boxes s'affichent automatiquement sur les déchets détectés.
+                      </Typography>
+                    </Alert>
+                  </Box>
+                ) : (
+                  /* MODE CAPTURE MANUELLE */
+                  <Grid container spacing={2}>
+                    {/* Colonne Webcam */}
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Webcam en direct
+                      </Typography>
+                      <Box sx={{ position: 'relative' }}>
+                        <Webcam
+                          ref={webcamRef}
+                          screenshotFormat="image/jpeg"
+                          width="100%"
+                          videoConstraints={{ facingMode: 'user' }}
                           style={{
+                            transform: 'scaleX(-1)',
+                            borderRadius: 8,
                             width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            borderRadius: 6
+                            display: 'block'
                           }}
                         />
-                      ) : (
-                        <Typography color="text.secondary">
-                          {loading ? 'Analyse en cours...' : 'En attente de capture'}
-                        </Typography>
-                      )}
-                    </Box>
-                    {result && (
-                      <Box sx={{ mt: 1 }}>
-                        <Box sx={{ p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
-                          <Typography variant="body2">
-                            Confiance: {(result.confidence_avg * 100).toFixed(1)}%
-                          </Typography>
-                          <Typography variant="body2">
-                            Temps: {result.processing_time.toFixed(2)}s
-                          </Typography>
-                        </Box>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          color="success"
-                          startIcon={<MapIcon />}
-                          onClick={() => onDetectionComplete && onDetectionComplete(result)}
-                          sx={{ mt: 1 }}
-                        >
-                          Voir sur la carte
-                        </Button>
+                        {loading && (
+                          <Box sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            borderRadius: 2,
+                            padding: 2
+                          }}>
+                            <CircularProgress color="primary" />
+                          </Box>
+                        )}
                       </Box>
-                    )}
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<CameraIcon />}
+                        onClick={captureImage}
+                        disabled={loading}
+                        sx={{ mt: 1 }}
+                      >
+                        {loading ? 'Détection en cours...' : 'Capturer & Détecter'}
+                      </Button>
+                    </Grid>
+
+                    {/* Colonne Résultat */}
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        {result ? (
+                          <span style={{ color: '#4caf50' }}>
+                            ✅ Résultat ({result.num_objects} objet{result.num_objects > 1 ? 's' : ''})
+                          </span>
+                        ) : (
+                          'Résultat de la détection'
+                        )}
+                      </Typography>
+                      <Box sx={{
+                        minHeight: { xs: 240, md: 320 },
+                        border: result ? '3px solid #4caf50' : '2px dashed #ccc',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: result ? 'transparent' : '#f5f5f5',
+                        overflow: 'hidden'
+                      }}>
+                        {result && result.annotated_url ? (
+                          <img
+                            src={`http://localhost:5001${result.annotated_url}`}
+                            alt="Détection annotée"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: 6
+                            }}
+                          />
+                        ) : (
+                          <Typography color="text.secondary">
+                            {loading ? 'Analyse en cours...' : 'En attente de capture'}
+                          </Typography>
+                        )}
+                      </Box>
+                      {result && (
+                        <Box sx={{ mt: 1 }}>
+                          <Box sx={{ p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                            <Typography variant="body2">
+                              Confiance: {(result.confidence_avg * 100).toFixed(1)}%
+                            </Typography>
+                            <Typography variant="body2">
+                              Temps: {result.processing_time.toFixed(2)}s
+                            </Typography>
+                          </Box>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            color="success"
+                            startIcon={<MapIcon />}
+                            onClick={() => onDetectionComplete && onDetectionComplete(result)}
+                            sx={{ mt: 1 }}
+                          >
+                            Voir sur la carte
+                          </Button>
+                        </Box>
+                      )}
+                    </Grid>
                   </Grid>
-                </Grid>
+                )}
               </Box>
             ) : (
               // Mode upload de fichier

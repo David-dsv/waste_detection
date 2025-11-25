@@ -1,0 +1,8 @@
+{
+  "name": "EcoDetect AI",
+  "description": "Urban waste detection system powered by YOLO11 and Gemini.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
